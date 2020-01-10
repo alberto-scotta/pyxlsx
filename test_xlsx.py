@@ -8,7 +8,7 @@ while True:
     name = raw_input("Give me the name whose password you wanna know: ")
     cell = xlsx.get_cell(name)
     if None != cell:
-	break
+        break
     else:
         print "Couldn't find name, are you sure it is correct? try again."
 
