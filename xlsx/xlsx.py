@@ -21,9 +21,9 @@ class Xlsx:
                 if c.hasAttribute("t") and c.getAttribute("t") == "s":
                     return self.__get_string_from_index(int(content))
                 else:
-                    if float(content) == int(content):
+                    try:
                         return int(content)
-                    else:
+                    except ValueError:
                         return float(content)
         return None
 
