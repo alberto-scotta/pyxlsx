@@ -28,7 +28,12 @@ class Xlsx:
                     try:
                         return int(content)
                     except ValueError:
+                        pass
+                    try:
                         return float(content)
+                    except ValueError:
+                        pass
+                    return None
         return None
 
     def get_cell(self, content):
