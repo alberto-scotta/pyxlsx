@@ -18,4 +18,11 @@ for char in cell:
 		row += char
 
 print xlsx.get_content(PWD_COL + row)
+
+cell = "D12"
+
+print ""
+print "Content of " + cell + ":"
+print xlsx.get_content(cell)
+
 print "Bye!"

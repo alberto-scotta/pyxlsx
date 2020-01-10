@@ -17,9 +17,14 @@ class Xlsx:
         c_list = self.sheet.getElementsByTagName("c")
         for c in c_list:
             if c.getAttribute("r") == cell:
+                content = c.firstChild.firstChild.data
                 if c.hasAttribute("t") and c.getAttribute("t") == "s":
-                    return self.__get_string_from_index(
-                            int(c.firstChild.firstChild.data))
+                    return self.__get_string_from_index(int(content))
+                else:
+                    if float(content) == int(content):
+                        return int(content)
+                    else:
+                        return float(content)
         return None
 
     def get_cell(self, content):
