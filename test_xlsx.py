@@ -34,4 +34,5 @@ print("")
 print("Content of " + cell + ":")
 print(xlsx.get_content(cell))
 
+xlsx.close()
 print("Bye!")

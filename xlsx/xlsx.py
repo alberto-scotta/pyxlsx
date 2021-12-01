@@ -4,7 +4,7 @@ import tempfile
 import os
 
 shared_strings_path = "xl/sharedStrings.xml"
-sheet1_path = "xl/worksheets/sheet1.xml"
+sheet_path = "xl/worksheets/sheet1.xml"
 
 class Xlsx:
     def __init__(self, filename):
@@ -12,7 +12,7 @@ class Xlsx:
         self.zip_file = zipfile.ZipFile(filename)
 
         self.shared_strings_file = self.zip_file.open(shared_strings_path)
-        self.sheet_file = self.zip_file.open(sheet1_path)
+        self.sheet_file = self.zip_file.open(sheet_path)
 
         self.shared_strings = minidom.parse(self.shared_strings_file)
         self.sheet = minidom.parse(self.sheet_file)
@@ -60,17 +60,21 @@ class Xlsx:
                 return i
         return None
 
+    def __get_last_index(self):
+        t_list = self.shared_strings.getElementsByTagName("si")
+        return len(t_list)
+
     def __get_string_from_index(self, index):
         t_list = self.shared_strings.getElementsByTagName("si")
         return t_list[index].firstChild.firstChild.data
 
-    def __del__(self):
+    # You always need to close the XML to save changes
+    def close(self):
         self.shared_strings_file.close()
         self.sheet_file.close()
         self.zip_file.close()
 
-    # can only write string cells
-    def write_cell(self, cell, string):
+        # Overwrite the file
         # Extract xlsx in a temp folder
         with tempfile.TemporaryDirectory() as tmpdirname:
             # Created temporary directory tmpdirname
@@ -79,23 +83,15 @@ class Xlsx:
         zip_file.extractall(tmpdirname)
         zip_file.close()
 
-        # Change the string file
-        cell = cell.strip()
-        c_list = self.sheet.getElementsByTagName("c")
-        for c in c_list:
-            if c.getAttribute("r") == cell:
-                try:
-                    content = c.firstChild.firstChild.data
-                except AttributeError:
-                    # void cell
-                    return False
-                if c.hasAttribute("t") and c.getAttribute("t") == "s":
-                    self.__write_string_from_index(int(content), string)
-
         # Open string file in write
         shared_strings_long_path = os.path.join(tmpdirname, shared_strings_path)
-        with open(shared_strings_long_path, "w") as shared_strings_file:
-            shared_strings_file.write(self.shared_strings.toxml())
+        with open(shared_strings_long_path, "wb") as shared_strings_file:
+            shared_strings_file.write(bytes(self.shared_strings.toxml(), "utf-8"))
+
+        # Open sheet file in write
+        sheet_long_path = os.path.join(tmpdirname, sheet_path)
+        with open(sheet_long_path, "wb") as sheet_file:
+            sheet_file.write(bytes(self.sheet.toxml(), "utf-8"))
 
         # Zip content of the folder overwritting old file
         zip_file = zipfile.ZipFile(self.filename, "w")
@@ -107,7 +103,51 @@ class Xlsx:
                 rel_path = os.path.relpath(complete_path, tmpdirname)
                 zip_file.write(complete_path, arcname=rel_path)
 
+    # can only write string cells
+    # Argument fancy should be set when you want to write, more complex
+    # stuff than a simple string
+    # In this case xml_element should be populated
+    def write_cell(self, cell, string=None, fancy=False, xml_element=None):
+        # Change the string file
+        cell = cell.strip()
+        c_list = self.sheet.getElementsByTagName("c")
 
-    def __write_string_from_index(self, index, string):
-        t_list = self.shared_strings.getElementsByTagName("si")
-        t_list[index].firstChild.firstChild.data = string
+        for c in c_list:
+            if c.getAttribute("r") == cell:
+                try:
+                    # If followign request is alright than cell
+                    # is already a string
+                    c.firstChild.firstChild.data
+                except AttributeError:
+                    # When the cell is empty add an element string
+                    c.setAttribute("t", "s")
+
+                    str_elem = self.sheet.createElement("v")
+                    str_elem_text = self.sheet.createTextNode("")
+                    str_elem.appendChild(str_elem_text)
+                    c.appendChild(str_elem)
+
+                # Get the index where we will put our string
+                c.firstChild.firstChild.data = self.__get_last_index()
+                if(not fancy):
+                    self.__write_string(string)
+                else:
+                    self.__write_string_elem(xml_element)
+                break
+
+    def __write_string(self, string):
+        si_elem = self.shared_strings.createElement("si")
+        self.shared_strings.childNodes[0].appendChild(si_elem)
+        t_elem = self.shared_strings.createElement("t")
+        t_elem_text = self.shared_strings.createTextNode(string)
+        t_elem.appendChild(t_elem_text)
+        si_elem.appendChild(t_elem)
+        self.shared_strings.childNodes[0].appendChild(si_elem)
+
+    def __write_string_elem(self, xml_elem):
+        if(type(xml_elem) != minidom.Element):
+            # Wrong argument
+            return False
+        self.shared_strings.childNodes[0].appendChild(xml_elem)        
+        return True
+
