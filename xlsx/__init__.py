@@ -1,1 +1,1 @@
-from xlsx import *
+from .xlsx import *
