@@ -48,13 +48,13 @@ class Xlsx:
 
     # return index that xlsx uses for internal mapping
     def __get_index_of_string(self, string):
-        t_list = self.shared_strings.getElementsByTagName("t")
+        t_list = self.shared_strings.getElementsByTagName("si")
         for i in range(0, len(t_list)):
-            if string in t_list[i].firstChild.data:
+            if string in t_list[i].firstChild.firstChild.data:
                 return i
         return None
 
     def __get_string_from_index(self, index):
-        t_list = self.shared_strings.getElementsByTagName("t")
-        return t_list[index].firstChild.data
+        t_list = self.shared_strings.getElementsByTagName("si")
+        return t_list[index].firstChild.firstChild.data
 
